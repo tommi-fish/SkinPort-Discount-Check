@@ -1,7 +1,8 @@
 import requests
 import creds
 import base64
-#import os
+import json
+from pathlib import Path
 #import pandas
 
 # SkinPort client id + client secret set. Stored in gitignored file. 
@@ -29,8 +30,18 @@ def percent_change(old, new):
     else: return 0
 
 
-def calculate_discounts(min_discount=0, min_price=0, max_price=100000, knife_only=False, glove_only=False, exclude_stattrak=False):
+def calculate_discounts(min_discount: int=0, min_price: int=0,
+                        max_price:int =100000, knife_only: bool=False,
+                        glove_only: bool=False, exclude_stattrak: bool=False):
     """ Iterating over the json sent back by API. Lots of filters based on the configuration. """
+
+    # Creates json if it doesn't exist
+    path = Path('./prev_output.json')
+    first_run = path.is_file()
+    if first_run:
+        json_object = json.dumps(response, indent=4)
+        with open("prev_output.json", "w") as outfile:
+            outfile.write(json_object)
 
     # Encoding unicode star character on knife/glove to avoid errors
     gold_char = "★"
@@ -103,9 +114,15 @@ def calculate_discounts(min_discount=0, min_price=0, max_price=100000, knife_onl
         elif item_discount >= min_discount:
             print('NOT HIGH ENOUGH DISCOUNT, SKIPPED')
             continue
+    
+        print(f"Item {item_name[0:10]}... satisfies search filters, adding to valid_items....")
+        valid_items.append(item)
 
-
-
+    # Won't re-create json if it is the first run, price comparison logic will only take place if it isn't the first run of script. 
+    if first_run == False:
+        json_object = json.dumps(response, indent=4)
+        with open("prev_output.json", "w") as outfile:
+            outfile.write(json_object)
 
     return valid_items
 
@@ -117,4 +134,4 @@ def calculate_discounts(min_discount=0, min_price=0, max_price=100000, knife_onl
 # glove_only = False
 # exclude_stattrak = False
 
-calculate_discounts(min_discount=10)
+items = calculate_discounts(min_discount=10, knife_only=True)
