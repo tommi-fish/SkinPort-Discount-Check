@@ -5,9 +5,13 @@ import json
 from pathlib import Path
 #import pandas
 
+
 # SkinPort client id + client secret set. Stored in gitignored file. 
 clientId = creds.api_key
 clientSecret = creds.api_secret
+
+# Option to send an email via gmail account. (gmail_send must be True).
+gmail_send = True
 
 # Creating BASIC Authentication header to communicate with API.
 clientData = f"{clientId}:{clientSecret}"
@@ -39,9 +43,11 @@ def calculate_discounts(min_discount: int=0, min_price: int=0,
     path = Path('./prev_output.json')
     first_run = path.is_file()
     if first_run:
+        print('No prev_output.json present, file will be generated now...')
         json_object = json.dumps(response, indent=4)
         with open("prev_output.json", "w") as outfile:
             outfile.write(json_object)
+        print('File generated...!')
 
     # Encoding unicode star character on knife/glove to avoid errors
     gold_char = "★"
@@ -123,9 +129,27 @@ def calculate_discounts(min_discount: int=0, min_price: int=0,
         json_object = json.dumps(response, indent=4)
         with open("prev_output.json", "w") as outfile:
             outfile.write(json_object)
+    
+    if gmail_send == True:
+        ### gmail testing 
+        sender = creds.gmail_sender
+        reciever = creds.gmail_receiver
+        import smtplib, ssl
 
-    return valid_items
+        port = 465  # For SSL
+        smtp_server = "smtp.gmail.com"
+        sender_email = sender  # Enter your address
+        receiver_email = reciever  # Enter receiver address
+        password = creds.app_password
+        message = """\
+Subject: Hi there
 
+This message is sent from Python."""
+
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(sender_email, password)
+            server.sendmail(from_addr=sender_email, to_addrs="immotfish@gmail.com", msg=message)
 # Filters
 # min_discount = 22
 # min_price = 0
