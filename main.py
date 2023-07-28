@@ -2,8 +2,7 @@ import requests
 import creds
 import base64
 import json
-from pathlib import Path
-#import pandas
+import os
 
 
 # SkinPort client id + client secret set. Stored in gitignored file. 
@@ -39,21 +38,11 @@ def calculate_discounts(min_discount: int=0, min_price: int=0,
                         glove_only: bool=False, exclude_stattrak: bool=False):
     """ Iterating over the json sent back by API. Lots of filters based on the configuration. """
 
-    # Creates json if it doesn't exist
-    path = Path('./prev_output.json')
-    first_run = path.is_file()
-    if first_run:
-        print('No prev_output.json present, file will be generated now...')
-        json_object = json.dumps(response, indent=4)
-        with open("prev_output.json", "w") as outfile:
-            outfile.write(json_object)
-        print('File generated...!')
-
     # Encoding unicode star character on knife/glove to avoid errors
     gold_char = "★"
     gold_char = gold_char.encode("utf-8")
 
-    valid_items = [] # All items that pass filters appended to valid_items 
+    new_valid_items = [] # All items that pass filters appended to valid_items 
 
     for item in response:
         # Item dictonary keys into variables for ease of use
@@ -63,7 +52,7 @@ def calculate_discounts(min_discount: int=0, min_price: int=0,
         item_currency = item_currency.encode('utf-8')
         suggested_price = item['suggested_price']
         item_page = item['item_page']
-        market_page = item['market_page']
+        item_market_page = item['market_page']
         item_min_price = item['min_price']
         item_max_price = item['max_price']
         item_mean_price = item['mean_price']
@@ -114,22 +103,36 @@ def calculate_discounts(min_discount: int=0, min_price: int=0,
         if item_min_price < min_price:
             print('MIN PRICE TOO LOW, SKIPPED.')
             continue
-        elif item_min_price > max_price:
+        if item_min_price > max_price:
             print('MAX PRICE EXCEEDED, SKIPPED')
             continue
-        elif item_discount >= min_discount:
+        if item_discount >= min_discount:
             print('NOT HIGH ENOUGH DISCOUNT, SKIPPED')
             continue
     
         print(f"Item {item_name[0:10]}... satisfies search filters, adding to valid_items....")
-        valid_items.append(item)
+        valid_item_dict = {
+            'name':item_name.decode(),
+            'price': item_min_price,
+            'discount': item_discount,
+            'suggested_price': suggested_price,
+            'link': item_market_page
+        }
+        new_valid_items.append(valid_item_dict)
 
-    # Won't re-create json if it is the first run, price comparison logic will only take place if it isn't the first run of script. 
-    if first_run == False:
-        json_object = json.dumps(response, indent=4)
-        with open("prev_output.json", "w") as outfile:
-            outfile.write(json_object)
-    
+    old_valid_items = None
+
+    # Assigning previous results to variable for comparison
+    json_empty = os.stat('prev_output.json').st_size == 0
+    if json_empty == False:
+        with open("prev_output.json", "r") as f:
+            old_valid_items = json.load(f)
+
+    # Now that old results are in memory, we assign 'new' resulsts to prev_output.json, so that they are the old results for next run...
+    with open("prev_output.json", "w") as f:
+        json.dump(new_valid_items, f)
+
+
     if gmail_send == True:
         ### gmail testing 
         sender = creds.gmail_sender
@@ -141,16 +144,52 @@ def calculate_discounts(min_discount: int=0, min_price: int=0,
         sender_email = sender  # Enter your address
         receiver_email = reciever  # Enter receiver address
         password = creds.app_password
-        message = """\
-Subject: Hi there
-
-This message is sent from Python."""
-
+        message = f"""\
+Subject: SkinPortAlert: New Item(s) satisfy filters...
+"""
+        
+        for i in new_valid_items:
+            if i in old_valid_items:
+                new_valid_items.remove(i)
+        message = message + "\n" + "The following New Items Have Been Found:"
+        for new_item in new_valid_items:
+            message = message + "\n"
+            message = message + f"Name: {new_item['name']}"
+            message = message + "\n"
+            message = message + f"Price: {new_item['price']}"
+            message = message + "\n"
+            message = message + f"SkinPort Suggested Price: {new_item['suggested_price']}"
+            message = message + "\n"
+            message = message + f"Discount: {new_item['discount']}"
+            message = message + "\n"
+            message = message + f"LINK: {new_item['link']}"
+            message = message + "\n"
+        message = message + "\n"
+        message = message + "\n" + "The following Items Are An Exact Match of Previously Found items, But Still Satisfy Filters:"
+        message = message + "\n"
+        print("new_valid_items processed")
+        if old_valid_items:    
+            for old_item in old_valid_items:
+                message = message + "\n"
+                message = message + f"Name: {old_item['name']}"
+                message = message + "\n"
+                message = message + f"Price: {old_item['price']}"
+                message = message + "\n"
+                message = message + f"SkinPort Suggested Price: {old_item['suggested_price']}"
+                message = message + "\n"
+                message = message + f"Discount: {old_item['discount']}"
+                message = message + "\n"
+                message = message + f"LINK: {old_item['link']}"
+                message = message + "\n"
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
             server.login(sender_email, password)
-            server.sendmail(from_addr=sender_email, to_addrs="immotfish@gmail.com", msg=message)
-# Filters
+            server.sendmail(from_addr=sender_email, to_addrs=receiver_email, msg=message.encode('utf-8'))
+
+        print("EMAIL MESSAGE SENT.")
+    else:
+        print("Not Attempting to Send Gmail... Re-Run Script To Populate Old Results...")
+            # Filters
 # min_discount = 22
 # min_price = 0
 # max_price = 250
@@ -158,4 +197,4 @@ This message is sent from Python."""
 # glove_only = False
 # exclude_stattrak = False
 
-items = calculate_discounts(min_discount=10, knife_only=True)
+items = calculate_discounts(min_discount=-27, knife_only=True, min_price=170, max_price=250)
