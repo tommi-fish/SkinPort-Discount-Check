@@ -134,6 +134,8 @@ def calculate_discounts(min_discount: int=0, min_price: int=0,
 
 
     if gmail_send == True:
+        import datetime
+        now = datetime.datetime.now()
         ### gmail testing 
         sender = creds.gmail_sender
         reciever = creds.gmail_receiver
@@ -145,7 +147,7 @@ def calculate_discounts(min_discount: int=0, min_price: int=0,
         receiver_email = reciever  # Enter receiver address
         password = creds.app_password
         message = f"""\
-Subject: SkinPortAlert: New Item(s) satisfy filters...
+Subject: SkinPortAlert: New Item(s) satisfy filters... {now}
 """
         
         for i in new_valid_items:
