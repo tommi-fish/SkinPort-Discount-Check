@@ -2,6 +2,8 @@ import requests
 import time
 import json
 from typing import Dict, List, Optional
+from dotenv import load_dotenv
+import os
 
 class SkinportAPI:
     BASE_URL = "https://api.skinport.com/v1"
@@ -28,8 +30,9 @@ class SkinportAPI:
         """
         endpoint = f"{self.BASE_URL}/items"
         params = {
-            "currency": currency,
-            "app_id": app_id
+            'currency': currency,
+            'app_id': app_id,
+            'api_key': self.api_key
         }
         
         try:
@@ -113,8 +116,11 @@ class SkinportAPI:
             raise
 
 if __name__ == "__main__":
-    # Example usage
-    api = SkinportAPI()
+    # Load environment variables from .env file
+    load_dotenv()
+    
+    # Initialize API with key from environment variable
+    api = SkinportAPI(api_key=os.getenv('SKINPORT_API_KEY'))
     try:
         # Get all items first to inspect the data
         items = api.get_items()
