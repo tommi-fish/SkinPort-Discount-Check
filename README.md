@@ -13,7 +13,7 @@ The SkinPort Discount Checker is a tool designed to track and analyze discounts 
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/SkinPort-Discount-Check.git
+   git clone https://github.com/tommi-fish/SkinPort-Discount-Check.git
    ```
 2. Navigate to the project directory:
    ```bash
