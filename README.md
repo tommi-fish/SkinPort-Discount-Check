@@ -54,5 +54,3 @@ This project is licensed under the MIT License.
 - [Skinport API Documentation](https://docs.skinport.com/)
 
 ---
-
-Feel free to customize this README further to suit your project's needs.
